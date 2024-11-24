@@ -3,6 +3,10 @@ export interface Inventory {
   size: number;
 }
 
+export interface Settings {
+  username?: string;
+}
+
 export interface AppContextType {
   isFishing: boolean;
   setIsFishing: (isFishing: boolean) => void;
@@ -12,4 +16,7 @@ export interface AppContextType {
 
   inventory: Inventory[];
   setInventory: React.Dispatch<React.SetStateAction<Inventory[]>>;
+
+  settings: Settings;
+  setSettings: React.Dispatch<React.SetStateAction<Settings>>;
 }

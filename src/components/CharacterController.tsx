@@ -1,11 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, OrbitControls, Text } from "@react-three/drei";
-import { RigidBody, useRapier } from "@react-three/rapier";
+import { RigidBody, useRapier, interactionGroups, CapsuleCollider } from "@react-three/rapier";
 
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import useKeyboard from "../lib/useKeyboard";
+import { AppContext } from "./AppContext";
+
 
 interface CharacterControllerProps {
   walkSpeed?: number;
@@ -16,13 +18,16 @@ export default function CharacterController({
   walkSpeed = 10,
   jumpForce = 5,
 }: CharacterControllerProps) {
+  const Context = useContext(AppContext);
   const characterRef = useRef<any>(null);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const { camera, gl } = useThree();
   const moveDirection = useRef(new Vector3());
-  const currentPosition = useRef(new Vector3());
   const isGrounded = useRef(false);
   const lastJumpTime = useRef(0);
+
+  const GROUND_THRESHOLD = 1.5; 
+  const lastGroundedTime = useRef(0);
 
   const keys = useKeyboard();
 
@@ -30,7 +35,7 @@ export default function CharacterController({
 
   useEffect(() => {
     if (characterRef.current) {
-      characterRef.current.setTranslation({ x: 0, y: 5, z: 0 }); // Start higher above terrain
+      characterRef.current.setTranslation({ x: 0, y: 5, z: 0 }); 
     }
 
     if (controlsRef.current) {
@@ -47,78 +52,108 @@ export default function CharacterController({
   const checkGrounded = () => {
     if (!characterRef.current) return false;
 
+    const now = Date.now();
     const position = characterRef.current.translation();
-    const origin = { x: position.x, y: position.y, z: position.z };
+    const currentVel = characterRef.current.linvel();
+    
+    if (currentVel.y > 1) {
+      lastGroundedTime.current = 0;
+      return false;
+    }
 
-    origin.y -= 1.0;
+   
+    const bottomY = position.y; 
+    const rayOrigins = [
+      { x: position.x, y: bottomY, z: position.z },
+      { x: position.x - 0.1, y: bottomY, z: position.z },
+      { x: position.x + 0.1, y: bottomY, z: position.z },
+    ];
 
-    const rayOrigin = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
+    let hits = 0;
+    for (const origin of rayOrigins) {
+      const ray = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
+      const hit = world.castRay(
+        ray,
+        GROUND_THRESHOLD,
+        true,
+        undefined,
+        interactionGroups(1, [0]) 
+      );
+      if (hit && hit.timeOfImpact < GROUND_THRESHOLD) hits++;
+    }
 
-    const hit = world.castRay(
-      rayOrigin,
-      0.2,
-      true,
-      undefined,
-      undefined,
-      characterRef.current,
-    );
+    const isGroundedNow = hits >= 2;
+    
+    if (isGroundedNow) {
+      lastGroundedTime.current = now;
+    }
 
-    return hit !== null;
+    return isGroundedNow;
+  };
+
+  const checkWater = () => {
+    if (!characterRef.current) return false;
+    const position = characterRef.current.translation();
+    return position.y < -1; 
   };
 
   useFrame(() => {
     if (!characterRef.current) return;
 
     const position = characterRef.current.translation();
-    currentPosition.current.set(position.x, position.y, position.z);
+    const currentVelocity = characterRef.current.linvel();
+    
+    // Reset movement direction
+    isGrounded.current = checkGrounded();
+    const inWater = checkWater();
+
+    const effectiveWalkSpeed = inWater ? walkSpeed * 0.5 : walkSpeed;
+    const effectiveJumpForce = inWater ? jumpForce * 0.5 : jumpForce;
+
+    // Reset movement direction
+    moveDirection.current.set(0, 0, 0);
 
     const cameraDirection = new Vector3();
     camera.getWorldDirection(cameraDirection);
     cameraDirection.y = 0;
     cameraDirection.normalize();
 
-    moveDirection.current.set(0, 0, 0);
+    // Handle movement input
+    const isMoving = keys["w"] || keys["s"] || keys["a"] || keys["d"];
+    
+    if (isMoving) {
+      if (keys["w"]) moveDirection.current.add(cameraDirection);
+      if (keys["s"]) moveDirection.current.sub(cameraDirection);
+      if (keys["d"]) moveDirection.current.add(cameraDirection.clone().cross(new Vector3(0, 1, 0)));
+      if (keys["a"]) moveDirection.current.add(cameraDirection.clone().cross(new Vector3(0, -1, 0)));
 
-    if (keys["w"]) {
-      moveDirection.current.add(cameraDirection);
-    }
-    if (keys["s"]) {
-      moveDirection.current.sub(cameraDirection);
-    }
-    if (keys["d"]) {
-      moveDirection.current.add(
-        cameraDirection.clone().cross(new Vector3(0, 1, 0)),
-      );
-    }
-    if (keys["a"]) {
-      moveDirection.current.add(
-        cameraDirection.clone().cross(new Vector3(0, -1, 0)),
-      );
-    }
-    if (moveDirection.current.length() > 0) {
       moveDirection.current.normalize();
-      moveDirection.current.multiplyScalar(walkSpeed);
+      moveDirection.current.multiplyScalar(effectiveWalkSpeed);
     }
 
-    isGrounded.current = checkGrounded();
-
-    const velocity = characterRef.current.linvel();
-
+    // Apply horizontal movement
     const horizontalVelocity = {
-      x: moveDirection.current.x,
-      y: velocity.y,
-      z: moveDirection.current.z,
+      x: isMoving ? moveDirection.current.x : currentVelocity.x * 0.95,
+      y: currentVelocity.y,
+      z: isMoving ? moveDirection.current.z : currentVelocity.z * 0.95
     };
 
-    const currentTime = Date.now();
-    if (
-      keys[" "] &&
-      isGrounded.current &&
-      currentTime - lastJumpTime.current > 500
-    ) {
-      horizontalVelocity.y = jumpForce;
-      lastJumpTime.current = currentTime;
+    // Handle vertical movement (water/jumping)
+    if (inWater) {
+      horizontalVelocity.y = Math.min(currentVelocity.y + 0.5, 2);
     }
+
+    const currentTime = Date.now();
+    const canJump = (isGrounded.current || inWater) && 
+                   currentTime - lastJumpTime.current > 500;
+
+    if (keys[" "] && canJump) {
+      horizontalVelocity.y = effectiveJumpForce;
+      lastJumpTime.current = currentTime;
+      isGrounded.current = false;
+      lastGroundedTime.current = 0; 
+    }
+
 
     characterRef.current.setLinvel(horizontalVelocity);
 
@@ -127,7 +162,6 @@ export default function CharacterController({
     }
 
     if (position.y < -10) {
-      // stops the character fallin thru floor (thanks threejs)
       characterRef.current.setTranslation({ x: 0, y: 50, z: 0 });
     }
   });
@@ -137,29 +171,31 @@ export default function CharacterController({
       <OrbitControls
         ref={controlsRef}
         args={[camera, gl.domElement]}
-        enableDamping={true}
-        dampingFactor={0.3}
-        zoomSpeed={1}
-        rotateSpeed={1}
-        panSpeed={1}
+        enableDamping={false}
+        maxPolarAngle={Math.PI * 0.8}
         maxDistance={10}
-        minDistance={2}
-        enablePan={true}
+        minDistance={3}
+        enablePan={false}
       />
 
       <RigidBody
         ref={characterRef}
-        colliders="ball"
         mass={1}
         type="dynamic"
-        position={[0, 0, 0]}
+        collisionGroups={interactionGroups(1, [0])} 
+        solverGroups={interactionGroups(1, [0])} 
         enabledRotations={[false, false, false]}
         lockRotations={true}
-        friction={0.2}
-        restitution={0}
       >
+
+        <CapsuleCollider
+          position={[0, 0, 0]}
+          rotation={[0, 0, 0]}
+          args={[0.3, 1]}
+        />
+
         <Billboard position={[0, 2, 0]} scale={0.2}>
-          <Text>Player</Text>
+          <Text>{Context.settings.username || "Player"}</Text>
         </Billboard>
         
         <mesh>
@@ -170,3 +206,4 @@ export default function CharacterController({
     </>
   );
 }
+

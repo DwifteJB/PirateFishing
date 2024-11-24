@@ -1,28 +1,30 @@
 import { useState, useEffect } from "react";
 
-interface KeyType {
-  [key: string]: boolean;
-}
-
 const useKeyboard = () => {
-  const [keys, setKeys] = useState<KeyType>({});
+  const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
-    const downHandler = ({ key }: { key: string }) =>
-      setKeys((prev) => ({ ...prev, [key]: true }));
-    const upHandler = ({ key }: { key: string }) =>
-      setKeys((prev) => ({ ...prev, [key]: false }));
+    const onKeyDown = (e: KeyboardEvent) => {
 
-    window.addEventListener("keydown", downHandler);
-    window.addEventListener("keyup", upHandler);
+      if (e.target instanceof HTMLInputElement) return;
+      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: true }));
+    };
+    
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+
+      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: false }));
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
 
     return () => {
-      window.removeEventListener("keydown", downHandler);
-      window.removeEventListener("keyup", upHandler);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
   }, []);
 
-  console.log(JSON.stringify(keys));
   return keys;
 };
 

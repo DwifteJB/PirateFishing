@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Mesh } from "three";
-import { RigidBody } from "@react-three/rapier";
+import { interactionGroups, RigidBody } from "@react-three/rapier";
 
 function Terrain() {
   const meshRef = useRef<Mesh>(null);
@@ -21,7 +21,7 @@ function Terrain() {
         const zPos = (z / resolution - 0.5) * size;
 
         const frequency = 0.002;
-        let height =
+        const height =
           Math.sin(xPos * frequency) * Math.cos(zPos * frequency) * 50 +
           Math.sin(xPos * frequency * 2) * Math.cos(zPos * frequency * 2) * 25 +
           Math.sin(xPos * frequency * 4) *
@@ -67,7 +67,13 @@ function Terrain() {
 
   return (
     <group>
-      <RigidBody type="fixed" colliders="trimesh">
+      <RigidBody 
+        type="fixed"
+        colliders="trimesh"
+        collisionGroups={interactionGroups(0, [1])} // Re-add collision groups
+        friction={1}
+        name="terrain"
+      >
         <mesh ref={meshRef}>
           <bufferGeometry>
             <bufferAttribute

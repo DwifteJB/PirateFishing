@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useContext } from "react";
 import { useThree } from "@react-three/fiber";
-import { Billboard, Text } from '@react-three/drei';
+import { Billboard, Text, useTexture, useGLTF } from '@react-three/drei';
 import { Raycaster, Vector3, Intersection, Mesh } from "three";
 import { useRapier } from "@react-three/rapier";
 import { AppContext } from "./AppContext";
@@ -17,6 +17,12 @@ const RaycastArrow = () => {
   const rapier = useRapier();
 
   const { camera, gl, mouse, scene } = useThree();
+
+  const arrowTexture = useTexture('/fishing_bobber/textures/Material.001_diffuse.png');
+
+  const bobberScene = useGLTF('/fishing_bobber/scene.gltf');
+  
+  
 
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
@@ -63,7 +69,7 @@ const RaycastArrow = () => {
           setArrowPosition(
             new Vector3(
               intersect.point.x,
-              intersect.point.y + 1.5,
+              intersect.point.y - 0.5,
               intersect.point.z,
             ),
           );
@@ -113,15 +119,15 @@ const RaycastArrow = () => {
             </Text>
         </Billboard>
       )}
-      <mesh
+      <primitive
+        object={bobberScene.scene}
         position={arrowPosition}
         onClick={onArrowClick}
         ref={arrowRef}
         visible={arrowVisible}
       >
-        <coneGeometry args={[1, 3, 4]} />
-        <meshStandardMaterial color="red" />
-      </mesh>
+        <meshStandardMaterial map={arrowTexture} />
+        </primitive>
     </>
   );
 };

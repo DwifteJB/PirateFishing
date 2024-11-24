@@ -9,17 +9,22 @@ import RaycastArrow from "../components/RaycastArrow";
 import BaseUI from "../components/BaseUI";
 import Inventory from "../components/Inventory";
 import FishingUI from "../components/FishingUI";
+import UsernameModal from "../components/UsernameModal";
 
 const MainPage = () => {
   return (
     <div className="bg-black w-screen h-screen overflow-hidden min-h-screen">
       <BaseUI />
+      <UsernameModal />
       <Inventory />
       <FishingUI />
       <Canvas>
         <SkyBox />
         <Suspense>
-          <Physics gravity={[0, -9.81, 0]} timeStep="vary">
+          <Physics 
+            gravity={[0, -9.81, 0]}
+            timeStep={1 / 60} // Changed from "vary" to a fixed time step
+          >
             <CharacterController />
             <Terrain />
             <RaycastArrow />
