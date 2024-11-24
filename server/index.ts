@@ -25,7 +25,7 @@ const port = process.env.PORT || 3000;
 
 const { app, getWss, applyTo } = expressWs(express());
 
-app.use(express.static("../dist"));
+app.use(express.static("./dist"));
 
 Websockets(app, getWss);
 
