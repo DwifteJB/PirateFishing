@@ -1,0 +1,22 @@
+{
+  "name": "webfishing-server",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node server/index.js",
+    "dev": "nodemon index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/express": "^5.0.0",
+    "@types/express-ws": "^3.0.5",
+    "@types/node": "^22.9.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-ws": "^5.0.2",
+    "typescript": "^5.7.2"
+  }
+}

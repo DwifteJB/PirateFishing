@@ -1,8 +1,8 @@
-
 # an extremely simple fishing game
+
 you can play this at [my website!](https://rmfosho.me/fish)
 
-this is my **SECOND** threejs project, so it was an attempt to make something 3d and "playable" 
+this is my **SECOND** threejs project, so it was an attempt to make something 3d and "playable"
 
 ## what is it run on?
 

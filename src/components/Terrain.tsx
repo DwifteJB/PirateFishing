@@ -67,10 +67,9 @@ function Terrain() {
 
   return (
     <group>
-      <RigidBody 
+      <RigidBody
         type="fixed"
-        colliders="trimesh"
-        collisionGroups={interactionGroups(0, [1])} // Re-add collision groups
+        colliders="trimesh"// Re-add collision groups
         friction={1}
         name="terrain"
       >

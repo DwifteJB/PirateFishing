@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useContext } from "react";
 import { useThree } from "@react-three/fiber";
-import { Billboard, Text, useTexture, useGLTF } from '@react-three/drei';
+import { Billboard, Text, useTexture, useGLTF } from "@react-three/drei";
 import { Raycaster, Vector3, Intersection, Mesh } from "three";
 import { useRapier } from "@react-three/rapier";
 import { AppContext } from "./AppContext";
@@ -18,18 +18,17 @@ const RaycastArrow = () => {
 
   const { camera, gl, mouse, scene } = useThree();
 
-  const arrowTexture = useTexture('/fishing_bobber/textures/Material.001_diffuse.png');
+  const arrowTexture = useTexture(
+    "/fishing_bobber/textures/Material.001_diffuse.png",
+  );
 
-  const bobberScene = useGLTF('/fishing_bobber/scene.gltf');
-  
-  
+  const bobberScene = useGLTF("/fishing_bobber/scene.gltf");
 
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
-
-        if (Context.isCasting || Context.isFishing) {
-            return;
-        } 
+      if (Context.isCasting || Context.isFishing) {
+        return;
+      }
 
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -69,7 +68,7 @@ const RaycastArrow = () => {
           setArrowPosition(
             new Vector3(
               intersect.point.x,
-              intersect.point.y - 0.5,
+              intersect.point.y - 0.2,
               intersect.point.z,
             ),
           );
@@ -89,10 +88,10 @@ const RaycastArrow = () => {
   const onArrowClick = useCallback(() => {
     if (arrowPosition) {
       if (Context.isCasting && !Context.isFishing) {
-        console.log("set not casting!")
+        console.log("set not casting!");
         Context.setIsCasting(false);
       } else if (!Context.isFishing) {
-        console.log("set casting!")
+        console.log("set casting!");
         Context.setIsCasting(true);
       }
     }
@@ -108,26 +107,31 @@ const RaycastArrow = () => {
   return (
     <>
       {arrowVisible && (Context.isCasting || Context.isFishing) && (
-        <Billboard position={[arrowPosition.x, arrowPosition.y + 3, arrowPosition.z]}>
-            <Text
-                scale={[1, 1, 1]}
-                color="white"
-                anchorX="center"
-                anchorY="middle"
-            >
-                {Context.isFishing ? "FISHING..." : "CASTING... CLICK THE ARROW TO STOP"}
-            </Text>
+        <Billboard
+          position={[arrowPosition.x, arrowPosition.y + 3, arrowPosition.z]}
+        >
+          <Text
+            scale={[1, 1, 1]}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {Context.isFishing
+              ? "FISHING..."
+              : "CASTING... CLICK THE ARROW TO STOP"}
+          </Text>
         </Billboard>
       )}
       <primitive
         object={bobberScene.scene}
+        scale={0.3}
         position={arrowPosition}
         onClick={onArrowClick}
         ref={arrowRef}
         visible={arrowVisible}
       >
         <meshStandardMaterial map={arrowTexture} />
-        </primitive>
+      </primitive>
     </>
   );
 };

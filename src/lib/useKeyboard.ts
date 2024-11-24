@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const useKeyboard = () => {
-  const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
+  const keys = useRef<{ [key: string]: boolean }>({});
+  const [realKeys, setRealKeys] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-
       if (e.target instanceof HTMLInputElement) return;
-      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: true }));
+      keys.current[e.key.toLowerCase()] = true;
+      setRealKeys({ ...keys.current, [e.key.toLowerCase()]: true });
     };
-    
+
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
-
-      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: false }));
+      keys.current[e.key.toLowerCase()] = false;
+      setRealKeys({ ...keys.current, [e.key.toLowerCase()]: false });
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -22,10 +23,14 @@ const useKeyboard = () => {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      keys.current = {};
     };
   }, []);
 
-  return keys;
+  return {
+    keys: realKeys,
+    ref: keys,
+  };
 };
 
 export default useKeyboard;
