@@ -29,7 +29,7 @@ const MainPage = () => {
         <Suspense>
           <Physics
             gravity={[0, -9.81, 0]}
-            timeStep={1 / 60} 
+            timeStep={"vary"} 
           >
             <CharacterController />
             <Terrain />

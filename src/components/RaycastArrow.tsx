@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback, useContext } from "react";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Text, useTexture, useGLTF } from "@react-three/drei";
-import { Raycaster, Vector3, Intersection, Mesh } from "three";
+import { Raycaster, Vector3, Intersection, Mesh, Object3D } from "three";
 import { useRapier } from "@react-three/rapier";
 import { AppContext } from "./AppContext";
+
 
 const RaycastArrow = () => {
   const Context = useContext(AppContext);
@@ -24,9 +25,33 @@ const RaycastArrow = () => {
 
   const bobberScene = useGLTF("/fishing_bobber/scene.gltf");
 
+  const isThrottled = useRef(false);
+
+  const waterRef = useRef<Object3D | null>(null);
+
+  const bobbingPhase = useRef(0);
+
+  useEffect(() => {
+    waterRef.current = scene.getObjectByName("water") || null;
+  }, [scene]);
+
+  useFrame((_, delta) => {
+    if (arrowVisible) {
+      if (arrowRef.current) {
+        // bobber bobbing animation
+        bobbingPhase.current += delta;
+        arrowRef.current.position.y = arrowPosition.y + Math.sin(bobbingPhase.current) * 0.1;
+      }
+    }
+  });
+
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
+      if (isThrottled.current) return;
+      isThrottled.current = true;
+
       if (Context.isCasting || Context.isFishing) {
+        isThrottled.current = false;
         return;
       }
 
@@ -35,18 +60,23 @@ const RaycastArrow = () => {
 
       raycaster.current.setFromCamera(mouse, camera);
 
-      const intersects: Intersection[] = raycaster.current.intersectObjects(
-        [...scene.children],
-        true,
+      if (!waterRef.current) {
+        setArrowVisible(false);
+        setTimeout(() => {
+          isThrottled.current = false;
+        }, 20);
+        return;
+      }
+
+      const intersects: Intersection[] = raycaster.current.intersectObject(
+        waterRef.current,
+        false,
       );
 
       let foundWater = false;
-      for (const intersect of intersects) {
-        if (intersect.object.name === "water") {
-          if (intersect.point.distanceTo(camera.position) > 30) {
-            break;
-          }
-
+      if (intersects.length > 0) {
+        const intersect = intersects[0];
+        if (intersect.point.distanceTo(camera.position) <= 30) {
           const rayOrigin = new rapier.rapier.Ray(intersect.point, {
             x: 0,
             y: 1,
@@ -62,25 +92,27 @@ const RaycastArrow = () => {
             undefined,
           );
 
-          if (secondRay !== null) {
-            break;
+          if (secondRay === null) {
+            setArrowPosition(
+              new Vector3(
+                intersect.point.x,
+                intersect.point.y - 0.2,
+                intersect.point.z,
+              ),
+            );
+            setArrowVisible(true);
+            foundWater = true;
           }
-          setArrowPosition(
-            new Vector3(
-              intersect.point.x,
-              intersect.point.y - 0.2,
-              intersect.point.z,
-            ),
-          );
-          setArrowVisible(true);
-          foundWater = true;
-          break;
         }
       }
 
       if (!foundWater) {
         setArrowVisible(false);
       }
+
+      setTimeout(() => {
+        isThrottled.current = false;
+      }, 20); 
     },
     [camera, gl, mouse, Context.isCasting, Context.isFishing],
   );

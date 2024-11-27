@@ -4,6 +4,7 @@ import { interactionGroups, RigidBody } from "@react-three/rapier";
 
 function Terrain() {
   const meshRef = useRef<Mesh>(null);
+  const waterMeshRef = useRef<Mesh>(null);
 
   const geometry = useMemo(() => {
     const size = 5000;
@@ -99,14 +100,20 @@ function Terrain() {
         </mesh>
       </RigidBody>
 
-      <mesh position={[0, -1, 0]} name="water" rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[5000, 5000]} />
+      <mesh
+        position={[0, -1, 0]}
+        name="water"
+        rotation={[-Math.PI / 2, 0, 0]}
+        ref={waterMeshRef} 
+      >
+        <planeGeometry args={[5000, 5000, 1, 1]} /> 
         <meshStandardMaterial
           color="#3a7ea1"
           transparent
           opacity={0.6}
           metalness={0.2}
           roughness={0.1}
+          side={2} 
         />
       </mesh>
     </group>
